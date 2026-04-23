@@ -225,11 +225,7 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
    * @returns {Promise<WalletAccountReadOnlyEvm7702Gasless>} The read-only account.
    */
   async toReadOnlyAccount () {
-    const address = await this._ownerAccount.getAddress()
-
-    const readOnlyAccount = new WalletAccountReadOnlyEvm7702Gasless(address, this._config)
-
-    return readOnlyAccount
+    return new WalletAccountReadOnlyEvm7702Gasless(this._address, this._config)
   }
 
   /**
