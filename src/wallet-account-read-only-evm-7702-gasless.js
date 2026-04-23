@@ -513,7 +513,12 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
 
     const [gasPrice, tip] = await Promise.all([
       sendJsonRpcRequest(config.provider, 'eth_gasPrice', []),
-      sendJsonRpcRequest(config.provider, 'eth_maxPriorityFeePerGas', []).catch(() => '0x0')
+      sendJsonRpcRequest(config.provider, 'eth_maxPriorityFeePerGas', []).catch(error => {
+        if (error?.cause?.code === -32601 || /method not found|not supported/i.test(error?.message ?? '')) {
+          return '0x0'
+        }
+        throw error
+      })
     ])
 
     const maxFeePerGas = BigInt(gasPrice)
