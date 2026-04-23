@@ -199,9 +199,7 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
   async quoteTransfer (options, config) {
     const tx = await WalletAccountReadOnlyEvm._getTransferTransaction(options)
 
-    const result = await this.quoteSendTransaction(tx, config)
-
-    return result
+    return await this.quoteSendTransaction(tx, config)
   }
 
   /**
