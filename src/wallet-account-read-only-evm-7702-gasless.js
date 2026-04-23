@@ -291,7 +291,7 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
    * @returns {Promise<bigint>} The chain id.
    */
   async _getChainId () {
-    if (!this._chainId) {
+    if (this._chainId === undefined) {
       const evmReadOnlyAccount = await this._getEvmReadOnlyAccount()
       const { chainId } = await evmReadOnlyAccount._provider.getNetwork()
       this._chainId = chainId
