@@ -99,10 +99,9 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
      * Returns a cached abstractionkit Simple7702Account bound to this EOA and
      * the configured delegation target.
      *
-     * @protected
-     * @returns {Simple7702Account}
+     * @private
      */
-    protected _getSmartAccount(): Simple7702Account;
+    private _getSmartAccount;
     /**
      * Returns a cached abstractionkit Bundler client.
      *
@@ -115,11 +114,9 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
      * Pre-seeds the paymaster with the known chain id so the first paymaster
      * call doesn't trigger a separate bundler `eth_chainId` round-trip.
      *
-     * @protected
-     * @param {Omit<Evm7702GaslessWalletConfig, 'transferMaxFee'>} config - The configuration.
-     * @returns {Promise<Erc7677Paymaster>}
+     * @private
      */
-    protected _getPaymaster(config: Omit<Evm7702GaslessWalletConfig, "transferMaxFee">): Promise<Erc7677Paymaster>;
+    private _getPaymaster;
     /**
      * Builds a paymaster-sponsored user operation for quoting or sending.
      * Does NOT sign. The caller adds the signature (and, for writes, the
