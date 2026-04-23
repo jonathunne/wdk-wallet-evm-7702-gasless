@@ -253,7 +253,7 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
    * @returns {Promise<boolean>} True if the signature is valid.
    */
   async verify (message, signature) {
-    const evmReadOnlyAccount = new WalletAccountReadOnlyEvm(this._address, this._config)
+    const evmReadOnlyAccount = await this._getEvmReadOnlyAccount()
     return await evmReadOnlyAccount.verify(message, signature)
   }
 
@@ -265,7 +265,7 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
    * @returns {Promise<boolean>} True if the signature is valid.
    */
   async verifyTypedData (typedData, signature) {
-    const evmReadOnlyAccount = new WalletAccountReadOnlyEvm(this._address, this._config)
+    const evmReadOnlyAccount = await this._getEvmReadOnlyAccount()
 
     return await evmReadOnlyAccount.verifyTypedData(typedData, signature)
   }
