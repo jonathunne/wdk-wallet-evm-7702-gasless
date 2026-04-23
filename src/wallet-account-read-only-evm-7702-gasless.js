@@ -158,7 +158,7 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
     const { paymasterToken } = this._config
 
     if (!paymasterToken) {
-      throw new Error('Paymaster token is not configured.')
+      throw new ConfigurationError('Paymaster token is not configured.')
     }
 
     return await this.getTokenBalance(paymasterToken.address)
