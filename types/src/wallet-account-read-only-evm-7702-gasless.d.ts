@@ -133,10 +133,15 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
     private _getTokenExchangeRate;
     /** @private */
     private _getUserOperationGasCost;
+    /** @private */
+    private _consumeCachedQuote;
+    /** @private */
+    private static _getTxKey;
     private _smartAccount;
     private _bundler;
     private _paymaster;
     private _evmReadOnlyAccount;
+    private _lastQuote;
 }
 export type Eip1193Provider = import("ethers").Eip1193Provider;
 export type EvmTransaction = import("@tetherto/wdk-wallet-evm").EvmTransaction;

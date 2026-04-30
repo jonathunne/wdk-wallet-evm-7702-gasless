@@ -42,19 +42,6 @@ const USDT_MAINNET_ADDRESS = '0xdAC17F958D2ee523a2206206994597C13D831ec7'
 
 const ERC20_APPROVE_ABI = ['function approve(address spender, uint256 amount) returns (bool)']
 
-const PACKED_USEROP_TYPES = {
-  PackedUserOperation: [
-    { name: 'sender', type: 'address' },
-    { name: 'nonce', type: 'uint256' },
-    { name: 'initCode', type: 'bytes' },
-    { name: 'callData', type: 'bytes' },
-    { name: 'accountGasLimits', type: 'bytes32' },
-    { name: 'preVerificationGas', type: 'uint256' },
-    { name: 'gasFees', type: 'bytes32' },
-    { name: 'paymasterAndData', type: 'bytes' }
-  ]
-}
-
 /** @implements {IWalletAccount} */
 export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEvm7702Gasless {
   /**
@@ -185,7 +172,9 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
 
     const { fee } = await this.quoteSendTransaction(tx, config)
 
-    const hash = await this._sendUserOperation([tx].flat(), mergedConfig)
+    const cached = this._consumeCachedQuote(tx)
+
+    const hash = await this._sendUserOperation([tx].flat(), mergedConfig, cached)
 
     return { hash, fee }
   }
@@ -210,7 +199,9 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
       throw new Error('Exceeded maximum fee cost for transfer operation.')
     }
 
-    const hash = await this._sendUserOperation([tx], mergedConfig)
+    const cached = this._consumeCachedQuote(tx)
+
+    const hash = await this._sendUserOperation([tx], mergedConfig, cached)
 
     return { hash, fee }
   }
@@ -261,13 +252,20 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
   }
 
   /** @private */
-  async _sendUserOperation (txs, config) {
+  async _sendUserOperation (txs, config, cached) {
     const eip7702Auth = await this._getAuthorization(config)
 
-    const { userOperation: sponsoredOp } = await this._buildSponsoredUserOperation(txs, config, { eip7702Auth })
+    let sponsoredOp
+    if (cached?.sponsoredOp && eip7702Auth === null) {
+      sponsoredOp = cached.sponsoredOp
+    } else {
+      const { userOperation } = await this._buildSponsoredUserOperation(txs, config, { eip7702Auth })
+      sponsoredOp = userOperation
+    }
 
+    const smartAccount = this._getSmartAccount()
     const chainId = await this._getChainId()
-    const typedData = this._buildUserOpV08TypedData(sponsoredOp, ENTRYPOINT_V8, chainId)
+    const typedData = smartAccount.getUserOperationEip712TypedData(sponsoredOp, chainId)
 
     sponsoredOp.signature = await this._ownerAccount.signTypedData({
       domain: typedData.domain,
@@ -276,72 +274,5 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
     })
 
     return await this._getBundler().sendUserOperation(sponsoredOp, ENTRYPOINT_V8)
-  }
-
-  /** @private */
-  _uint128Hex (n) {
-    return BigInt(n).toString(16).padStart(32, '0')
-  }
-
-  /** @private */
-  _buildInitCode (userOp) {
-    if (userOp.eip7702Auth?.address) {
-      const factoryData = userOp.factoryData ? userOp.factoryData.slice(2) : ''
-      return userOp.eip7702Auth.address + factoryData
-    }
-    if (userOp.factory) {
-      const factoryData = userOp.factoryData ? userOp.factoryData.slice(2) : ''
-      return userOp.factory + factoryData
-    }
-    return '0x'
-  }
-
-  /** @private */
-  _buildPaymasterAndData (userOp) {
-    if (!userOp.paymaster) return '0x'
-
-    let out = userOp.paymaster
-    if (userOp.paymasterVerificationGasLimit != null) {
-      out += this._uint128Hex(userOp.paymasterVerificationGasLimit)
-    }
-    if (userOp.paymasterPostOpGasLimit != null) {
-      out += this._uint128Hex(userOp.paymasterPostOpGasLimit)
-    }
-    if (userOp.paymasterData) {
-      out += userOp.paymasterData.slice(2)
-    }
-    return out
-  }
-
-  /** @private */
-  _buildUserOpV08TypedData (userOp, entrypointAddress, chainId) {
-    const initCode = this._buildInitCode(userOp)
-    const paymasterAndData = this._buildPaymasterAndData(userOp)
-
-    const accountGasLimits =
-      '0x' + this._uint128Hex(userOp.verificationGasLimit) + this._uint128Hex(userOp.callGasLimit)
-    const gasFees =
-      '0x' + this._uint128Hex(userOp.maxPriorityFeePerGas) + this._uint128Hex(userOp.maxFeePerGas)
-
-    return {
-      domain: {
-        name: 'ERC4337',
-        version: '1',
-        chainId,
-        verifyingContract: entrypointAddress
-      },
-      types: PACKED_USEROP_TYPES,
-      primaryType: 'PackedUserOperation',
-      message: {
-        sender: userOp.sender,
-        nonce: BigInt(userOp.nonce),
-        initCode,
-        callData: userOp.callData,
-        accountGasLimits,
-        preVerificationGas: BigInt(userOp.preVerificationGas),
-        gasFees,
-        paymasterAndData
-      }
-    }
   }
 }

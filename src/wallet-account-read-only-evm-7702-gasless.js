@@ -96,6 +96,7 @@ import { ConfigurationError } from './errors.js'
 const GAS_FEE_MULTIPLIER = 150n
 const GAS_FEE_DIVISOR = 100n
 const EXCHANGE_RATE_PRECISION = 10n ** 18n
+const QUOTE_CACHE_TTL_MS = 2 * 60 * 1000
 
 export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountReadOnly {
   /**
@@ -134,6 +135,9 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
 
     /** @private */
     this._evmReadOnlyAccount = undefined
+
+    /** @private */
+    this._lastQuote = undefined
   }
 
   /**
@@ -206,9 +210,17 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
       return { fee: 0n }
     }
 
-    const fee = await this._getUserOperationGasCost([tx].flat(), mergedConfig)
+    const result = await this._getUserOperationGasCost([tx].flat(), mergedConfig)
 
-    return { fee: BigInt(fee) }
+    this._lastQuote = {
+      fee: BigInt(result.fee),
+      createdAt: Date.now(),
+      txKey: WalletAccountReadOnlyEvm7702Gasless._getTxKey(tx),
+      sponsoredOp: result.sponsoredOp,
+      tokenQuote: result.tokenQuote
+    }
+
+    return { fee: BigInt(result.fee) }
   }
 
   /**
@@ -494,6 +506,28 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
   }
 
   /** @private */
+  _consumeCachedQuote (tx) {
+    const quote = this._lastQuote
+    this._lastQuote = undefined
+
+    if (!quote) return null
+    if (Date.now() - quote.createdAt > QUOTE_CACHE_TTL_MS) return null
+    if (quote.txKey !== WalletAccountReadOnlyEvm7702Gasless._getTxKey(tx)) return null
+
+    return quote
+  }
+
+  /** @private */
+  static _getTxKey (tx) {
+    const txs = Array.isArray(tx) ? tx : [tx]
+    return JSON.stringify(txs.map(t => ({
+      to: (t.to ?? '').toLowerCase(),
+      value: BigInt(t.value || 0).toString(),
+      data: t.data || '0x'
+    })))
+  }
+
+  /** @private */
   async _getTokenExchangeRate (config) {
     const tokenAddress = config.paymasterToken.address
     const paymasterUrl = config.paymasterUrl || config.bundlerUrl
@@ -529,21 +563,24 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
   async _getUserOperationGasCost (txs, config) {
     const { userOperation: sponsoredOp, tokenQuote } = await this._buildSponsoredUserOperation(txs, config)
 
+    let fee
     if (tokenQuote?.tokenCost != null) {
-      return tokenQuote.tokenCost
+      fee = tokenQuote.tokenCost
+    } else {
+      const totalGas =
+        sponsoredOp.callGasLimit +
+        sponsoredOp.verificationGasLimit +
+        sponsoredOp.preVerificationGas +
+        (sponsoredOp.paymasterVerificationGasLimit || 0n) +
+        (sponsoredOp.paymasterPostOpGasLimit || 0n)
+
+      const gasCostInWei = totalGas * sponsoredOp.maxFeePerGas
+
+      const exchangeRate = tokenQuote?.exchangeRate ?? await this._getTokenExchangeRate(config)
+
+      fee = (gasCostInWei * exchangeRate + (EXCHANGE_RATE_PRECISION - 1n)) / EXCHANGE_RATE_PRECISION
     }
 
-    const totalGas =
-      sponsoredOp.callGasLimit +
-      sponsoredOp.verificationGasLimit +
-      sponsoredOp.preVerificationGas +
-      (sponsoredOp.paymasterVerificationGasLimit || 0n) +
-      (sponsoredOp.paymasterPostOpGasLimit || 0n)
-
-    const gasCostInWei = totalGas * sponsoredOp.maxFeePerGas
-
-    const exchangeRate = tokenQuote?.exchangeRate ?? await this._getTokenExchangeRate(config)
-
-    return (gasCostInWei * exchangeRate + (EXCHANGE_RATE_PRECISION - 1n)) / EXCHANGE_RATE_PRECISION
+    return { fee, sponsoredOp, tokenQuote }
   }
 }
