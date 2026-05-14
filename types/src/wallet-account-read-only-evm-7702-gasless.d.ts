@@ -83,11 +83,11 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
      * Validates the configuration to ensure all required fields are present.
      *
      * @protected
-     * @param {Partial<Evm7702GaslessSponsorshipPolicyConfig | Evm7702GaslessPaymasterTokenConfig>} config - The configuration to validate.
+     * @param {Partial<Evm7702GaslessWalletConfig>} config - The configuration to validate.
      * @throws {ConfigurationError} If the configuration is invalid or has missing required fields.
      * @returns {void}
      */
-    protected _validateConfig(config: Partial<Evm7702GaslessSponsorshipPolicyConfig | Evm7702GaslessPaymasterTokenConfig>): void;
+    protected _validateConfig(config: Partial<Evm7702GaslessWalletConfig>): void;
     /**
      * Returns the chain id.
      *

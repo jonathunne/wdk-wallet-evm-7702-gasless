@@ -109,6 +109,8 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
   constructor (address, config) {
     super(address)
 
+    this._validateConfig(config)
+
     /**
      * The read-only evm 7702 gasless wallet account configuration.
      *
@@ -307,11 +309,20 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
    * Validates the configuration to ensure all required fields are present.
    *
    * @protected
-   * @param {Partial<Evm7702GaslessSponsorshipPolicyConfig | Evm7702GaslessPaymasterTokenConfig>} config - The configuration to validate.
+   * @param {Partial<Evm7702GaslessWalletConfig>} config - The configuration to validate.
    * @throws {ConfigurationError} If the configuration is invalid or has missing required fields.
    * @returns {void}
    */
   _validateConfig (config) {
+    if (!config.provider) {
+      throw new ConfigurationError('Missing required configuration field: provider.')
+    }
+    if (!config.bundlerUrl) {
+      throw new ConfigurationError('Missing required configuration field: bundlerUrl.')
+    }
+    if (!config.delegationAddress) {
+      throw new ConfigurationError('Missing required configuration field: delegationAddress.')
+    }
     if (!config.isSponsored && !config.paymasterToken) {
       throw new ConfigurationError('Missing required paymaster token configuration fields: paymasterToken.')
     }
