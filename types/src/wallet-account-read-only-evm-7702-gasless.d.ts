@@ -197,6 +197,20 @@ export type SponsoredUserOperation = {
      */
     tokenQuote?: TokenQuote;
 };
+export type UserOperationGasCost = {
+    /**
+     * - The estimated fee with no tolerance buffer applied. For sponsored flows it's in wei; for token-paymaster flows it's in the paymaster token's base units.
+     */
+    fee: bigint;
+    /**
+     * - The paymaster-populated user operation built during the quote, reusable for sendTransaction.
+     */
+    sponsoredOp: UserOperationV8;
+    /**
+     * - Token-paymaster fee data. Populated on the token-payment flow; absent on sponsored flows.
+     */
+    tokenQuote?: TokenQuote;
+};
 export type Evm7702GaslessWalletCommonConfig = {
     /**
      * - The url of the rpc provider, or an instance of a class that implements eip-1193.

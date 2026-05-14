@@ -66,6 +66,13 @@ import { ConfigurationError } from './errors.js'
  */
 
 /**
+ * @typedef {Object} UserOperationGasCost
+ * @property {bigint} fee - The estimated fee with no tolerance buffer applied. For sponsored flows it's in wei; for token-paymaster flows it's in the paymaster token's base units.
+ * @property {UserOperationV8} sponsoredOp - The paymaster-populated user operation built during the quote, reusable for sendTransaction.
+ * @property {TokenQuote} [tokenQuote] - Token-paymaster fee data. Populated on the token-payment flow; absent on sponsored flows.
+ */
+
+/**
  * @typedef {Object} Evm7702GaslessWalletCommonConfig
  * @property {string | Eip1193Provider} provider - The url of the rpc provider, or an instance of a class that implements eip-1193.
  * @property {string} bundlerUrl - The url of the bundler/paymaster service.
@@ -580,7 +587,12 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
     return BigInt(token.exchangeRate)
   }
 
-  /** @private */
+  /**
+   * @private
+   * @param {EvmTransaction[]} txs - The transactions to batch into the user operation.
+   * @param {Omit<Evm7702GaslessWalletConfig, 'transferMaxFee'>} config - The merged wallet configuration.
+   * @returns {Promise<UserOperationGasCost>} The fee plus the built user operation (and token quote when applicable), cacheable between quote and send.
+   */
   async _getUserOperationGasCost (txs, config) {
     const { userOperation: sponsoredOp, tokenQuote } = await this._buildSponsoredUserOperation(txs, config)
 
