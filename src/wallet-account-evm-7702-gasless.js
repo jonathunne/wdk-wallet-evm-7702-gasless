@@ -39,7 +39,6 @@ import WalletAccountReadOnlyEvm7702Gasless from './wallet-account-read-only-evm-
 /** @typedef {import('./wallet-account-read-only-evm-7702-gasless.js').Evm7702GaslessPaymasterTokenConfig} Evm7702GaslessPaymasterTokenConfig */
 /** @typedef {import('./wallet-account-read-only-evm-7702-gasless.js').Evm7702GaslessSponsorshipPolicyConfig} Evm7702GaslessSponsorshipPolicyConfig */
 /** @typedef {import('./wallet-account-read-only-evm-7702-gasless.js').TypedData} TypedData */
-/** @typedef {import('./wallet-account-read-only-evm-7702-gasless.js').Eip7702AuthorizationOverride} Eip7702AuthorizationOverride */
 
 /**
  * @typedef {Object} TransactionQuote
@@ -311,10 +310,7 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
     this._ownerAccount.dispose()
   }
 
-  /**
-   * @private
-   * @returns {Promise<Eip7702AuthorizationOverride | null>}
-   */
+  /** @private */
   async _getAuthorization (config = this._config) {
     const delegation = await this._ownerAccount.getDelegation()
 
