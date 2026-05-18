@@ -18,7 +18,7 @@ import { Contract } from 'ethers'
 
 import { WalletAccountEvm } from '@tetherto/wdk-wallet-evm'
 
-import { ENTRYPOINT_V8 } from 'abstractionkit'
+import { ENTRYPOINT_V8, Simple7702Account } from 'abstractionkit'
 
 import WalletAccountReadOnlyEvm7702Gasless from './wallet-account-read-only-evm-7702-gasless.js'
 
@@ -345,9 +345,8 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
       sponsoredOp = userOperation
     }
 
-    const smartAccount = this._getSmartAccount()
     const chainId = await this._getChainId()
-    const typedData = smartAccount.getUserOperationEip712TypedData(sponsoredOp, chainId)
+    const typedData = Simple7702Account.getUserOperationEip712Data(sponsoredOp, chainId)
 
     sponsoredOp.signature = await this._ownerAccount.signTypedData({
       domain: typedData.domain,
