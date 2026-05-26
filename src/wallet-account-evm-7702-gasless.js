@@ -198,7 +198,7 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
    */
   async quoteSendTransaction (tx, config) {
-    const mergedConfig = { ...this._config, ...config }
+    const mergedConfig = { ...this._config, provider: this._provider, ...config }
 
     if (config) {
       this._validateConfig(mergedConfig)
@@ -232,7 +232,7 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
    * @returns {Promise<TransactionResult>} The transaction's result.
    */
   async sendTransaction (tx, config) {
-    const mergedConfig = { ...this._config, ...config }
+    const mergedConfig = { ...this._config, provider: this._provider, ...config }
 
     if (config) {
       this._validateConfig(mergedConfig)
@@ -264,7 +264,7 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
    * @returns {Promise<TransferResult>} The transfer's result.
    */
   async transfer (options, config) {
-    const mergedConfig = { ...this._config, ...config }
+    const mergedConfig = { ...this._config, provider: this._provider, ...config }
 
     if (config) {
       this._validateConfig(mergedConfig)

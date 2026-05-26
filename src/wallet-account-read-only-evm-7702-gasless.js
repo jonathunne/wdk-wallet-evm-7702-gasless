@@ -14,6 +14,8 @@
 
 'use strict'
 
+import { JsonRpcProvider } from 'ethers'
+
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
 
 import { WalletAccountReadOnlyEvm } from '@tetherto/wdk-wallet-evm'
@@ -26,6 +28,8 @@ import {
   Simple7702Account,
   sendJsonRpcRequest
 } from 'abstractionkit'
+
+import FailoverProvider from '@tetherto/wdk-failover-provider'
 
 import { ConfigurationError } from './errors.js'
 
@@ -74,7 +78,8 @@ import { ConfigurationError } from './errors.js'
 
 /**
  * @typedef {Object} Evm7702GaslessWalletCommonConfig
- * @property {string | Eip1193Provider} provider - The url of the rpc provider, or an instance of a class that implements eip-1193.
+ * @property {string | Eip1193Provider | Array<string | Eip1193Provider>} provider - The url of the rpc provider, or an instance of a class that implements eip-1193. It's also possible to provide an array of urls or EIP 1193 providers instead. In such case, connection errors will cause the wallet to automatically fallback on the next provider in the list.
+ * @property {number} [retries] - If set and if 'provider' is a list of urls or EIP 1193 providers, the number of additional retry attempts after the initial call fails. Total attempts = `1 + retries`. For example, `retries: 3` with 4 providers will try each provider once before throwing. If `retries` exceeds the number of providers, the failover will loop back and retry already-failed providers in round-robin order. Default: 3.
  * @property {string} bundlerUrl - The url of the bundler/paymaster service.
  * @property {string} [paymasterUrl] - The url of the paymaster service if different from bundlerUrl (e.g. for Candide which uses separate endpoints).
  * @property {string} delegationAddress - The address of the smart account implementation to delegate to (e.g. '0xe6Cae83BdE06E4c305530e199D7217f42808555B' for SimpleAccount).
@@ -124,6 +129,19 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
      * @type {Omit<Evm7702GaslessWalletConfig, 'transferMaxFee'>}
      */
     this._config = config
+
+    /**
+     * An EIP-1193–compatible provider used to interact with the blockchain.
+     *
+     * Note: the provider type is restricted to EIP-1193 to ensure compatibility
+     * with Safe4337Pack and to enable the failover mechanism. While RPC URLs
+     * can still be provided in the configuration, they are internally wrapped
+     * into an EIP-1193 provider.
+     *
+     * @protected
+     * @type {Eip1193Provider}
+     */
+    this._provider = this._createFailoverProvider(this._config)
 
     /**
      * The chain id.
@@ -205,7 +223,7 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
    */
   async quoteSendTransaction (tx, config) {
-    const mergedConfig = { ...this._config, ...config }
+    const mergedConfig = { ...this._config, provider: this._provider, ...config }
 
     if (config) {
       this._validateConfig(mergedConfig)
@@ -299,6 +317,53 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
     const evmReadOnlyAccount = await this._getEvmReadOnlyAccount()
 
     return await evmReadOnlyAccount.verifyTypedData(typedData, signature)
+  }
+
+  /**
+   * Wraps a string RPC URL or provider into an EIP-1193 compatible provider.
+   *
+   * @protected
+   * @param {string | Eip1193Provider} provider - The url of the rpc provider, or an instance of a class that implements eip-1193.
+   * @returns { Eip1193Provider } A wrapped Eip1193Provider instance.
+   */
+  _wrapEip1193Provider (provider) {
+    return typeof provider === 'string'
+      ? {
+          provider: new JsonRpcProvider(provider),
+          request ({ method, params }) {
+            return this.provider.send(method, params ?? [])
+          }
+        }
+      : provider
+  }
+
+  /**
+   * Creates a FailoverProvider from the configured providers. If only one provider is supplied, it is wrapped and returned.
+   *
+   * @protected
+   * @param {Omit<Evm7702GaslessWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
+   * @returns {Eip1193Provider} A wrapped Eip1193Provider instance.
+   * @throws {ConfigurationError} If the `provider` option is set to an empty array.
+   */
+  _createFailoverProvider (config = this._config) {
+    const { provider, retries = 3 } = config
+
+    if (Array.isArray(provider)) {
+      if (!provider.length) {
+        throw new ConfigurationError("The 'provider' option cannot be set to an empty list.")
+      }
+
+      const failoverProvider = new FailoverProvider({ retries })
+
+      for (const entry of provider) {
+        const option = this._wrapEip1193Provider(entry)
+        failoverProvider.addProvider(option)
+      }
+
+      return failoverProvider.initialize()
+    }
+
+    return this._wrapEip1193Provider(provider)
   }
 
   /**
