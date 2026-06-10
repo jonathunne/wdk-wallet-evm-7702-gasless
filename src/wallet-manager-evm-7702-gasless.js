@@ -119,6 +119,7 @@ export default class WalletManagerEvm7702Gasless extends WalletManager {
    * Returns the current fee rates.
    *
    * @returns {Promise<FeeRates>} The fee rates (in weis).
+   * @throws {Error} If the wallet is not connected to a provider.
    */
   async getFeeRates () {
     if (!this._provider) {

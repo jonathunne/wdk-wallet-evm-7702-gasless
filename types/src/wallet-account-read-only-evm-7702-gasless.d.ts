@@ -17,7 +17,7 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
      * An EIP-1193–compatible provider used to interact with the blockchain.
      *
      * Note: the provider type is restricted to EIP-1193 to ensure compatibility
-     * with Safe4337Pack and to enable the failover mechanism. While RPC URLs
+     * with `abstractionkit` and to enable the failover mechanism. While RPC URLs
      * can still be provided in the configuration, they are internally wrapped
      * into an EIP-1193 provider.
      *
@@ -147,6 +147,8 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
      * @param {Omit<Evm7702GaslessWalletConfig, 'transferMaxFee'>} config - The merged wallet configuration (base config merged with any per-call overrides).
      * @param {BuildSponsoredUserOperationOverrides} [overrides] - Optional overrides for the build step (currently only the pre-signed 7702 authorization).
      * @returns {Promise<SponsoredUserOperation>} The paymaster-populated user operation plus the token-quote data (when applicable).
+     * @throws {Error} If the token paymaster reports AA50 (account does not hold the paymaster token).
+     * @throws {ConfigurationError} If the configured `paymasterAddress` does not match the address returned by the paymaster RPC.
      */
     protected _buildSponsoredUserOperation(txs: EvmTransaction[], config: Omit<Evm7702GaslessWalletConfig, "transferMaxFee">, overrides?: BuildSponsoredUserOperationOverrides): Promise<SponsoredUserOperation>;
     /**
@@ -159,7 +161,6 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
      * @param {EvmTransaction[]} txs - The transactions to batch into the user operation.
      * @param {Omit<Evm7702GaslessWalletConfig, 'transferMaxFee'>} config - The merged wallet configuration.
      * @returns {Promise<UserOperationGasCost>} The fee plus the built user operation and the token-quote data, cacheable between quote and send.
-     * @throws {Error} If the paymaster simulation reports AA50 (account does not hold enough of the paymaster token to cover the gas cost).
      */
     protected _getUserOperationGasCost(txs: EvmTransaction[], config: Omit<Evm7702GaslessWalletConfig, "transferMaxFee">): Promise<UserOperationGasCost>;
     /** @private */
