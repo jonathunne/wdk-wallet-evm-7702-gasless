@@ -14,7 +14,7 @@
 
 'use strict'
 
-import { JsonRpcProvider } from 'ethers'
+import { isError, JsonRpcProvider } from 'ethers'
 
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
 
@@ -109,6 +109,14 @@ import { ConfigurationError } from './errors.js'
 const GAS_FEE_MULTIPLIER = 150n
 const GAS_FEE_DIVISOR = 100n
 const EXCHANGE_RATE_PRECISION = 10n ** 18n
+
+/**
+ * The ethers error codes that denote a connectivity failure.
+ *
+ * @see https://docs.ethers.org/v6/api/utils/errors/
+ * @type {Set<import('ethers').ErrorCode>}
+ */
+const CONNECTIVITY_ERROR_CODES = new Set(['NETWORK_ERROR', 'SERVER_ERROR', 'TIMEOUT'])
 
 export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountReadOnly {
   /**
@@ -353,7 +361,10 @@ export default class WalletAccountReadOnlyEvm7702Gasless extends WalletAccountRe
         throw new ConfigurationError("The 'provider' option cannot be set to an empty list.")
       }
 
-      const failoverProvider = new FailoverProvider({ retries })
+      const failoverProvider = new FailoverProvider({
+        retries,
+        shouldRetryOn: (error) => [...CONNECTIVITY_ERROR_CODES].some((code) => isError(error, code))
+      })
 
       for (const entry of provider) {
         const option = this._wrapEip1193Provider(entry)

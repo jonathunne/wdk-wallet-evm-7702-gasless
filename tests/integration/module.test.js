@@ -574,7 +574,7 @@ describe('@wdk/wallet-evm-7702-gasless', () => {
 
     test('should fail over to the next provider when the first one in the array errors', async () => {
       const failingProvider = {
-        request: jest.fn(() => Promise.reject(new Error('simulated RPC connection failure')))
+        request: jest.fn(() => Promise.reject(Object.assign(new Error('simulated RPC connection failure'), { code: 'SERVER_ERROR' })))
       }
 
       const config = {
@@ -595,6 +595,34 @@ describe('@wdk/wallet-evm-7702-gasless', () => {
 
       expect(failingProvider.request).toHaveBeenCalled()
       expect(receipt.status).toBe(1)
+    }, TIMEOUT)
+
+    test('should not fail over to the next provider when the first one in the array errors with a non-connectivity error', async () => {
+      const failingProvider = {
+        request: jest.fn(() => Promise.reject(Object.assign(new Error('execution reverted'), { code: 'CALL_EXCEPTION' })))
+      }
+      const secondProvider = {
+        request: jest.fn(({ method, params }) => ethersProvider.send(method, params ?? []))
+      }
+
+      const config = {
+        provider: [failingProvider, secondProvider],
+        bundlerUrl: 'http://localhost:4337',
+        paymasterUrl: 'http://localhost:3000?pimlico',
+        paymasterAddress,
+        delegationAddress: DELEGATION_ADDRESS,
+        paymasterToken: { address: MOCK_PAYMASTER_TOKEN_ADDRESS }
+      }
+
+      const arrayProviderWallet = new WalletManagerEvm7702Gasless(SEED_PHRASE, config)
+      const account0 = await arrayProviderWallet.getAccountByPath("0'/0/0")
+
+      const TX = { to: ACCOUNT1.address, value: 0 }
+
+      await expect(account0.sendTransaction(TX)).rejects.toThrow()
+
+      expect(failingProvider.request).toHaveBeenCalled()
+      expect(secondProvider.request).not.toHaveBeenCalled()
     }, TIMEOUT)
   })
 
