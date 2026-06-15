@@ -18,7 +18,7 @@ import { Contract } from 'ethers'
 
 import { WalletAccountEvm } from '@tetherto/wdk-wallet-evm'
 
-import { ENTRYPOINT_V8, Simple7702Account } from 'abstractionkit'
+import { ENTRYPOINT_V8, Simple7702Account, fetchAccountNonce } from 'abstractionkit'
 
 import WalletAccountReadOnlyEvm7702Gasless from './wallet-account-read-only-evm-7702-gasless.js'
 
@@ -240,7 +240,7 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
 
     const { isSponsored } = mergedConfig
 
-    let cached = this._consumeCachedQuote(tx)
+    let cached = await this._consumeFreshQuote(tx)
     let fee = 0n
 
     if (cached) {
@@ -275,7 +275,7 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
 
     const tx = await WalletAccountEvm._getTransferTransaction(options)
 
-    let cached = this._consumeCachedQuote(tx)
+    let cached = await this._consumeFreshQuote(tx)
     let fee = 0n
 
     if (cached) {
@@ -360,6 +360,16 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
     })
 
     return await this._getBundler().sendUserOperation(sponsoredOp, ENTRYPOINT_V8)
+  }
+
+  /** @private */
+  async _consumeFreshQuote (tx) {
+    const cached = this._consumeCachedQuote(tx)
+    if (!cached?.sponsoredOp) return cached
+
+    const onChainNonce = await fetchAccountNonce(this._provider, ENTRYPOINT_V8, this._address)
+
+    return cached.sponsoredOp.nonce === onChainNonce ? cached : null
   }
 
   /** @private */

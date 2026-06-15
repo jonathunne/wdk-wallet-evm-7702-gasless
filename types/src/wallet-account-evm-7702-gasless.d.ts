@@ -106,6 +106,8 @@ export default class WalletAccountEvm7702Gasless extends WalletAccountReadOnlyEv
     /** @private */
     private _sendUserOperation;
     /** @private */
+    private _consumeFreshQuote;
+    /** @private */
     private _consumeCachedQuote;
     /** @private */
     private _sweepExpiredQuotes;
