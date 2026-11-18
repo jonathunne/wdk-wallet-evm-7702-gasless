@@ -431,10 +431,8 @@ Read-only EIP-7702 gasless wallet account. Can query balances and estimate fees 
 |--------|---------------------------------------|-------------------------------|
 | Smart Account | Safe contract (predicted address) | EOA delegated via EIP-7702 |
 | `getAddress()` | Returns Safe contract address | Returns EOA address directly |
-| Underlying Library | `@tetherto/wdk-safe-relay-kit` | `abstractionkit` |
 | Address Prediction | `predictSafeAddress()` required | No prediction needed |
 | Gas Payment | Native coins, paymaster token, sponsored | Sponsored or paymaster token |
-| Token Approval | Manual `amountToApprove` | Automatic (including USDT reset) |
 | Chain Requirement | Any EVM with ERC-4337 | Requires Pectra-activated chains (EIP-7702) |
 
 ## Supported Networks
